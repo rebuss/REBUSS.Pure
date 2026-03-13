@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using REBUSS.GitDaif.McpDiffServer.Mcp;
 using REBUSS.GitDaif.McpDiffServer.Mcp.Models;
@@ -79,38 +80,55 @@ namespace REBUSS.GitDaif.McpDiffServer.Tools
             try
             {
                 if (!TryExtractPrNumber(arguments, out var prNumber, out var error))
+                {
+                    _logger.LogWarning("[{ToolName}] Validation failed: {Error}", ToolName, error);
                     return CreateErrorResult(error);
+                }
 
                 if (!TryExtractPath(arguments!, out var path, out error))
+                {
+                    _logger.LogWarning("[{ToolName}] Validation failed: {Error}", ToolName, error);
                     return CreateErrorResult(error);
+                }
 
                 var format = ExtractStringArgument(arguments!, "format", "text");
 
-                _logger.LogInformation(
-                    "Fetching diff for file '{Path}' in PR #{PrNumber} (format={Format})",
-                    path, prNumber, format);
+                _logger.LogInformation("[{ToolName}] Entry: PR #{PrNumber}, path='{Path}', format={Format}",
+                    ToolName, prNumber, path, format);
+                var sw = Stopwatch.StartNew();
 
                 var diff = await _diffProvider.GetFileDiffAsync(prNumber, path, cancellationToken);
 
-                return format.ToLowerInvariant() switch
+                var result = format.ToLowerInvariant() switch
                 {
                     "json" or "structured" => BuildStructuredResult(prNumber, diff),
                     _ => BuildTextResult(prNumber, path, diff)
                 };
+
+                sw.Stop();
+
+                _logger.LogInformation(
+                    "[{ToolName}] Completed: PR #{PrNumber}, path='{Path}', format={Format}, {ResponseLength} chars, {ElapsedMs}ms",
+                    ToolName, prNumber, path, format, result.Content[0].Text.Length, sw.ElapsedMilliseconds);
+
+                return result;
             }
             catch (PullRequestNotFoundException ex)
             {
-                _logger.LogWarning(ex, "Pull request not found");
+                _logger.LogWarning(ex, "[{ToolName}] Pull request not found (prNumber={PrNumber}, path='{Path}')",
+                    ToolName, arguments?.GetValueOrDefault("prNumber"), arguments?.GetValueOrDefault("path"));
                 return CreateErrorResult($"Pull Request not found: {ex.Message}");
             }
             catch (FileNotFoundInPullRequestException ex)
             {
-                _logger.LogWarning(ex, "File not found in pull request");
+                _logger.LogWarning(ex, "[{ToolName}] File not found in pull request (prNumber={PrNumber}, path='{Path}')",
+                    ToolName, arguments?.GetValueOrDefault("prNumber"), arguments?.GetValueOrDefault("path"));
                 return CreateErrorResult($"File not found in Pull Request: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing get_file_diff tool");
+                _logger.LogError(ex, "[{ToolName}] Error (prNumber={PrNumber}, path='{Path}', format={Format})",
+                    ToolName, arguments?.GetValueOrDefault("prNumber"), arguments?.GetValueOrDefault("path"), arguments?.GetValueOrDefault("format"));
                 return CreateErrorResult($"Error retrieving file diff: {ex.Message}");
             }
         }

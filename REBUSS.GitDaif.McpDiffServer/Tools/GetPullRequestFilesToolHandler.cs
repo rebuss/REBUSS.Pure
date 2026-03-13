@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using REBUSS.GitDaif.McpDiffServer.Mcp;
 using REBUSS.GitDaif.McpDiffServer.Mcp.Models;
@@ -63,23 +64,33 @@ namespace REBUSS.GitDaif.McpDiffServer.Tools
             try
             {
                 if (!TryExtractPrNumber(arguments, out var prNumber, out var error))
+                {
+                    _logger.LogWarning("[{ToolName}] Validation failed: {Error}", ToolName, error);
                     return CreateErrorResult(error);
+                }
 
-                _logger.LogInformation("Fetching files for PR #{PrNumber}", prNumber);
+                _logger.LogInformation("[{ToolName}] Entry: PR #{PrNumber}", ToolName, prNumber);
+                var sw = Stopwatch.StartNew();
 
                 var prFiles = await _filesProvider.GetFilesAsync(prNumber, cancellationToken);
                 var result = BuildResult(prNumber, prFiles);
 
-                return CreateSuccessResult(JsonSerializer.Serialize(result, JsonOptions));
+                var json = JsonSerializer.Serialize(result, JsonOptions);
+                sw.Stop();
+
+                _logger.LogInformation("[{ToolName}] Completed: PR #{PrNumber}, {FileCount} file(s), {ResponseLength} chars, {ElapsedMs}ms",
+                    ToolName, prNumber, prFiles.Files.Count, json.Length, sw.ElapsedMilliseconds);
+
+                return CreateSuccessResult(json);
             }
             catch (PullRequestNotFoundException ex)
             {
-                _logger.LogWarning(ex, "Pull request not found");
+                _logger.LogWarning(ex, "[{ToolName}] Pull request not found (prNumber={PrNumber})", ToolName, arguments?.GetValueOrDefault("prNumber"));
                 return CreateErrorResult($"Pull Request not found: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing get_pr_files tool");
+                _logger.LogError(ex, "[{ToolName}] Error (prNumber={PrNumber})", ToolName, arguments?.GetValueOrDefault("prNumber"));
                 return CreateErrorResult($"Error retrieving PR files: {ex.Message}");
             }
         }

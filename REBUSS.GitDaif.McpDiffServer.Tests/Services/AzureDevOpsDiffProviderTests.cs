@@ -53,7 +53,7 @@ public class AzureDevOpsDiffProviderTests
             new PullRequestMetadataParser(NullLogger<PullRequestMetadataParser>.Instance),
             new IterationInfoParser(NullLogger<IterationInfoParser>.Instance),
             new FileChangesParser(NullLogger<FileChangesParser>.Instance),
-            new UnifiedDiffBuilder(new LcsDiffAlgorithm()),
+            new UnifiedDiffBuilder(new LcsDiffAlgorithm(), NullLogger<UnifiedDiffBuilder>.Instance),
             NullLogger<AzureDevOpsDiffProvider>.Instance);
     }
 

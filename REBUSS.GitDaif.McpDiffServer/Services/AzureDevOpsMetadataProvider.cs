@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using REBUSS.GitDaif.McpDiffServer.AzureDevOpsIntegration.Services;
@@ -37,6 +38,7 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
             try
             {
                 _logger.LogInformation("Fetching metadata for PR #{PrNumber}", prNumber);
+                var sw = Stopwatch.StartNew();
 
                 var prDetailsJson = await _apiClient.GetPullRequestDetailsAsync(prNumber);
                 var metadata = _metadataParser.ParseFull(prDetailsJson);
@@ -58,6 +60,14 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
                     var files = _changesParser.Parse(changesJson);
                     metadata.ChangedFilesCount = files.Count;
                 }
+
+                sw.Stop();
+
+                _logger.LogInformation(
+                    "Metadata for PR #{PrNumber} completed: title='{Title}', status={Status}, " +
+                    "{CommitCount} commit(s), {FileCount} file(s) changed, {ElapsedMs}ms",
+                    prNumber, metadata.Title, metadata.Status,
+                    metadata.CommitShas.Count, metadata.ChangedFilesCount, sw.ElapsedMilliseconds);
 
                 return metadata;
             }

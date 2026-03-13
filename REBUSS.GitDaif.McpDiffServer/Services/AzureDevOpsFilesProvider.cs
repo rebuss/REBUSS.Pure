@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using REBUSS.GitDaif.McpDiffServer.Services.Classification;
 using REBUSS.GitDaif.McpDiffServer.Services.Models;
@@ -28,6 +29,7 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
         public async Task<PullRequestFiles> GetFilesAsync(int prNumber, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching files for PR #{PrNumber}", prNumber);
+            var sw = Stopwatch.StartNew();
 
             var diff = await _diffProvider.GetDiffAsync(prNumber, cancellationToken);
 
@@ -37,6 +39,17 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
 
             var files = classified.Select(x => BuildFileInfo(x.fileChange, x.classification)).ToList();
             var summary = BuildSummary(classified.Select(x => x.classification).ToList(), files);
+
+            sw.Stop();
+
+            _logger.LogInformation(
+                "Files for PR #{PrNumber} completed: {TotalFiles} file(s) " +
+                "(source={SourceFiles}, test={TestFiles}, config={ConfigFiles}, docs={DocsFiles}, " +
+                "binary={BinaryFiles}, generated={GeneratedFiles}, highPriority={HighPriority}), {ElapsedMs}ms",
+                prNumber, files.Count,
+                summary.SourceFiles, summary.TestFiles, summary.ConfigFiles, summary.DocsFiles,
+                summary.BinaryFiles, summary.GeneratedFiles, summary.HighPriorityFiles,
+                sw.ElapsedMilliseconds);
 
             return new PullRequestFiles { Files = files, Summary = summary };
         }

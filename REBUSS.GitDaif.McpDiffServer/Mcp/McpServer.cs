@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using REBUSS.GitDaif.McpDiffServer.Mcp.Handlers;
 using REBUSS.GitDaif.McpDiffServer.Mcp.Models;
 using System.Text.Json;
@@ -63,7 +64,7 @@ namespace REBUSS.GitDaif.McpDiffServer.Mcp
             {
                 new InitializeMethodHandler(),
                 new ToolsListMethodHandler(tools),
-                new ToolsCallMethodHandler(tools, serializer)
+                new ToolsCallMethodHandler(tools, serializer, NullLogger<ToolsCallMethodHandler>.Instance)
             };
         }
 

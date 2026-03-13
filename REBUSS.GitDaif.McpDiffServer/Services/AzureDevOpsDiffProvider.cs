@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using REBUSS.GitDaif.McpDiffServer.AzureDevOpsIntegration.Services;
 using REBUSS.GitDaif.McpDiffServer.Services.Models;
@@ -44,12 +45,26 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
             try
             {
                 _logger.LogInformation("Fetching diff for PR #{PrNumber}", prNumber);
+                var sw = Stopwatch.StartNew();
 
                 var (metadata, files, baseCommit, targetCommit) = await FetchPullRequestDataAsync(prNumber);
 
+                _logger.LogInformation(
+                    "PR #{PrNumber}: {FileCount} file(s) changed, building diffs (base={BaseCommit}, target={TargetCommit})",
+                    prNumber, files.Count,
+                    baseCommit?.Length > 7 ? baseCommit[..7] : baseCommit,
+                    targetCommit?.Length > 7 ? targetCommit[..7] : targetCommit);
+
                 await BuildFileDiffsAsync(files, baseCommit, targetCommit, cancellationToken);
 
-                return BuildDiff(metadata, files, baseCommit, targetCommit);
+                var result = BuildDiff(metadata, files, baseCommit, targetCommit);
+                sw.Stop();
+
+                _logger.LogInformation(
+                    "Diff for PR #{PrNumber} completed: {FileCount} file(s), {DiffLength} chars, {ElapsedMs}ms",
+                    prNumber, files.Count, result.DiffContent.Length, sw.ElapsedMilliseconds);
+
+                return result;
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -68,6 +83,7 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
             try
             {
                 _logger.LogInformation("Fetching diff for file '{Path}' in PR #{PrNumber}", path, prNumber);
+                var sw = Stopwatch.StartNew();
 
                 var (metadata, files, baseCommit, targetCommit) = await FetchPullRequestDataAsync(prNumber);
 
@@ -85,7 +101,14 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
 
                 await BuildFileDiffsAsync(matchingFiles, baseCommit, targetCommit, cancellationToken);
 
-                return BuildDiff(metadata, matchingFiles, baseCommit, targetCommit);
+                var result = BuildDiff(metadata, matchingFiles, baseCommit, targetCommit);
+                sw.Stop();
+
+                _logger.LogInformation(
+                    "File diff for '{Path}' in PR #{PrNumber} completed: {DiffLength} chars, {ElapsedMs}ms",
+                    path, prNumber, result.DiffContent.Length, sw.ElapsedMilliseconds);
+
+                return result;
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -135,11 +158,24 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (string.IsNullOrEmpty(baseCommit) || string.IsNullOrEmpty(targetCommit))
+                {
+                    _logger.LogDebug(
+                        "Skipping diff for '{FilePath}': commit SHAs not resolved (base={BaseCommit}, target={TargetCommit})",
+                        file.Path, baseCommit ?? "<null>", targetCommit ?? "<null>");
                     continue;
+                }
+
+                var fileSw = Stopwatch.StartNew();
 
                 var baseContent   = await _apiClient.GetFileContentAtCommitAsync(baseCommit,   file.Path);
                 var targetContent = await _apiClient.GetFileContentAtCommitAsync(targetCommit, file.Path);
                 file.Diff = _diffBuilder.Build(file.Path, baseContent, targetContent);
+
+                fileSw.Stop();
+
+                _logger.LogDebug(
+                    "Built diff for '{FilePath}' ({ChangeType}): {DiffLength} chars, {ElapsedMs}ms",
+                    file.Path, file.ChangeType, file.Diff?.Length ?? 0, fileSw.ElapsedMilliseconds);
             }
         }
 
@@ -169,9 +205,11 @@ namespace REBUSS.GitDaif.McpDiffServer.Services
                 .Select(f => f.Diff)
                 .ToList();
 
-            return diffSections.Count > 0
-                ? string.Join("\n", diffSections)
-                : GenerateFallbackDiff(files, string.IsNullOrEmpty(baseCommit) || string.IsNullOrEmpty(targetCommit));
+            if (diffSections.Count > 0)
+                return string.Join("\n", diffSections);
+
+            var noCommitShas = string.IsNullOrEmpty(baseCommit) || string.IsNullOrEmpty(targetCommit);
+            return GenerateFallbackDiff(files, noCommitShas);
         }
 
         private static string GenerateFallbackDiff(List<FileChange> files, bool noCommitShas)

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using REBUSS.GitDaif.McpDiffServer.Services;
 
 namespace REBUSS.GitDaif.McpDiffServer.Tests.Services;
@@ -5,7 +6,7 @@ namespace REBUSS.GitDaif.McpDiffServer.Tests.Services;
 public class UnifiedDiffBuilderTests
 {
     private readonly IUnifiedDiffBuilder _builder =
-        new UnifiedDiffBuilder(new LcsDiffAlgorithm());
+        new UnifiedDiffBuilder(new LcsDiffAlgorithm(), NullLogger<UnifiedDiffBuilder>.Instance);
 
     [Fact]
     public void Build_ReturnsEmpty_WhenBothContentIdentical()

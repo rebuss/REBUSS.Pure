@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using REBUSS.GitDaif.McpDiffServer.Mcp;
 using REBUSS.GitDaif.McpDiffServer.Mcp.Models;
@@ -68,13 +69,19 @@ namespace REBUSS.GitDaif.McpDiffServer.Tools
             try
             {
                 if (!TryExtractPath(arguments, out var path, out var error))
+                {
+                    _logger.LogWarning("[{ToolName}] Validation failed: {Error}", ToolName, error);
                     return CreateErrorResult(error);
+                }
 
                 if (!TryExtractRef(arguments!, out var gitRef, out error))
+                {
+                    _logger.LogWarning("[{ToolName}] Validation failed: {Error}", ToolName, error);
                     return CreateErrorResult(error);
+                }
 
-                _logger.LogInformation(
-                    "Fetching file content for '{Path}' at ref '{Ref}'", path, gitRef);
+                _logger.LogInformation("[{ToolName}] Entry: path='{Path}', ref='{Ref}'", ToolName, path, gitRef);
+                var sw = Stopwatch.StartNew();
 
                 var fileContent = await _fileContentProvider.GetFileContentAsync(path, gitRef, cancellationToken);
 
@@ -88,16 +95,25 @@ namespace REBUSS.GitDaif.McpDiffServer.Tools
                     IsBinary = fileContent.IsBinary
                 };
 
-                return CreateSuccessResult(JsonSerializer.Serialize(result, JsonOptions));
+                var json = JsonSerializer.Serialize(result, JsonOptions);
+                sw.Stop();
+
+                _logger.LogInformation(
+                    "[{ToolName}] Completed: path='{Path}', ref='{Ref}', {Size} bytes, binary={IsBinary}, {ResponseLength} chars, {ElapsedMs}ms",
+                    ToolName, path, gitRef, fileContent.Size, fileContent.IsBinary, json.Length, sw.ElapsedMilliseconds);
+
+                return CreateSuccessResult(json);
             }
             catch (FileContentNotFoundException ex)
             {
-                _logger.LogWarning(ex, "File content not found");
+                _logger.LogWarning(ex, "[{ToolName}] File content not found (path='{Path}', ref='{Ref}')",
+                    ToolName, arguments?.GetValueOrDefault("path"), arguments?.GetValueOrDefault("ref"));
                 return CreateErrorResult($"File not found: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing get_file_content_at_ref tool");
+                _logger.LogError(ex, "[{ToolName}] Error (path='{Path}', ref='{Ref}')",
+                    ToolName, arguments?.GetValueOrDefault("path"), arguments?.GetValueOrDefault("ref"));
                 return CreateErrorResult($"Error retrieving file content: {ex.Message}");
             }
         }

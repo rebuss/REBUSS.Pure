@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace REBUSS.GitDaif.McpDiffServer.Services;
 
@@ -11,10 +13,12 @@ public class UnifiedDiffBuilder : IUnifiedDiffBuilder
     private const int DefaultContextLines = 3;
 
     private readonly IDiffAlgorithm _diffAlgorithm;
+    private readonly ILogger<UnifiedDiffBuilder> _logger;
 
-    public UnifiedDiffBuilder(IDiffAlgorithm diffAlgorithm)
+    public UnifiedDiffBuilder(IDiffAlgorithm diffAlgorithm, ILogger<UnifiedDiffBuilder> logger)
     {
         _diffAlgorithm = diffAlgorithm;
+        _logger = logger;
     }
 
     public string Build(string filePath, string? baseContent, string? targetContent)
@@ -22,20 +26,43 @@ public class UnifiedDiffBuilder : IUnifiedDiffBuilder
         if (baseContent == targetContent)
             return string.Empty;
 
+        var sw = Stopwatch.StartNew();
+
         var aPath = filePath.TrimStart('/');
         var baseLines = SplitLines(baseContent);
         var targetLines = SplitLines(targetContent);
 
         var hunks = ComputeHunks(baseLines, targetLines, DefaultContextLines);
         if (hunks.Count == 0)
+        {
+            _logger.LogDebug(
+                "Diff for '{FilePath}': 0 hunks (old={OldLineCount}, new={NewLineCount})",
+                aPath, baseLines.Length, targetLines.Length);
             return string.Empty;
+        }
 
         var sb = new StringBuilder();
         sb.Append(BuildDiffHeader(aPath, baseContent, targetContent));
         foreach (var hunk in hunks)
             sb.Append(hunk);
 
-        return sb.ToString().TrimEnd();
+        sw.Stop();
+
+        var result = sb.ToString().TrimEnd();
+
+        _logger.LogDebug(
+            "Diff for '{FilePath}': {HunkCount} hunk(s), old={OldLineCount} lines, new={NewLineCount} lines, " +
+            "diffLength={DiffLength} chars, {ElapsedMs}ms",
+            aPath, hunks.Count, baseLines.Length, targetLines.Length, result.Length, sw.ElapsedMilliseconds);
+
+        if (hunks.Count > 50)
+        {
+            _logger.LogWarning(
+                "Suspicious diff for '{FilePath}': {HunkCount} hunks (possible generated/binary file)",
+                aPath, hunks.Count);
+        }
+
+        return result;
     }
 
     internal static string[] SplitLines(string? content)

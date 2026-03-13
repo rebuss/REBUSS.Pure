@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using REBUSS.GitDaif.McpDiffServer.Mcp;
 using REBUSS.GitDaif.McpDiffServer.Mcp.Models;
@@ -74,28 +75,41 @@ namespace REBUSS.GitDaif.McpDiffServer.Tools
             try
             {
                 if (!TryExtractPrNumber(arguments, out var prNumber, out var error))
+                {
+                    _logger.LogWarning("[{ToolName}] Validation failed: {Error}", ToolName, error);
                     return CreateErrorResult(error);
+                }
 
                 var format = ExtractStringArgument(arguments!, "format", "text");
 
-                _logger.LogInformation("Fetching diff for PR #{PrNumber} (format={Format})", prNumber, format);
+                _logger.LogInformation("[{ToolName}] Entry: PR #{PrNumber}, format={Format}", ToolName, prNumber, format);
+                var sw = Stopwatch.StartNew();
 
                 var diff = await _diffProvider.GetDiffAsync(prNumber, cancellationToken);
 
-                return format.ToLowerInvariant() switch
+                var result = format.ToLowerInvariant() switch
                 {
                     "json" or "structured" => BuildStructuredResult(prNumber, diff),
                     _ => BuildTextResult(prNumber, diff)
                 };
+
+                sw.Stop();
+
+                _logger.LogInformation(
+                    "[{ToolName}] Completed: PR #{PrNumber}, format={Format}, {FileCount} file(s), {ResponseLength} chars, {ElapsedMs}ms",
+                    ToolName, prNumber, format, diff.Files.Count, result.Content[0].Text.Length, sw.ElapsedMilliseconds);
+
+                return result;
             }
             catch (PullRequestNotFoundException ex)
             {
-                _logger.LogWarning(ex, "Pull request not found");
+                _logger.LogWarning(ex, "[{ToolName}] Pull request not found (prNumber={PrNumber})", ToolName, arguments?.GetValueOrDefault("prNumber"));
                 return CreateErrorResult($"Pull Request not found: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing get_pr_diff tool");
+                _logger.LogError(ex, "[{ToolName}] Error (prNumber={PrNumber}, format={Format})",
+                    ToolName, arguments?.GetValueOrDefault("prNumber"), arguments?.GetValueOrDefault("format"));
                 return CreateErrorResult($"Error retrieving PR diff: {ex.Message}");
             }
         }
