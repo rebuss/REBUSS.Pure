@@ -1,0 +1,272 @@
+# Pull Request Code Review
+
+Perform a professional code review of the pull request.
+
+Pull request number: {{input}}
+
+Use MCP server: `REBUSS.PR`.
+
+The goal is to detect real technical risks while minimizing unnecessary context usage.
+
+---
+
+# Review Goals
+
+Focus on issues affecting:
+
+- correctness
+- potential bugs or regressions
+- null safety
+- concurrency and thread safety
+- async/await correctness
+- breaking changes
+- validation and error handling
+- maintainability
+- performance
+- security
+- missing or insufficient tests
+
+Avoid focusing on minor style issues unless they affect correctness or maintainability.
+
+---
+
+# MCP Tools
+
+Use the following MCP tools from `REBUSS.PR`.
+
+### get_pr_metadata(prNumber)
+
+Use **first**.
+
+Purpose:
+- understand the scope of the PR
+- retrieve `base.sha` and `head.sha`
+- retrieve PR title, author and description
+- determine review strategy
+
+---
+
+### get_pr_files(prNumber)
+
+Use **after metadata**.
+
+Purpose:
+- retrieve the list of changed files
+- obtain per-file statistics (additions/deletions/changes)
+- determine which files to review first
+
+Use this to avoid loading the entire PR diff at once.
+
+---
+
+### get_file_diff(prNumber, path)
+
+Default method for reviewing code.
+
+Purpose:
+- retrieve only the patch for a specific file
+- analyze changes with minimal context cost
+
+Always prefer this before retrieving full file content.
+
+---
+
+### get_file_content_at_ref(path, ref)
+
+Use only when the diff alone does not provide enough context.
+
+Purpose:
+- retrieve the full file content from a specific revision.
+
+Use:
+
+- `head.sha` to inspect the new implementation
+- `base.sha` to inspect the previous implementation
+
+Do not retrieve full content for every file by default.
+
+---
+
+# Mandatory Review Workflow
+
+## Step 1 — Load metadata
+
+Call:
+
+get_pr_metadata(prNumber)
+
+Use the result to determine:
+
+- PR size
+- number of changed files
+- number of commits
+- total additions/deletions
+- base SHA and head SHA
+- high-level intent of the change
+
+---
+
+## Step 2 — Retrieve changed files
+
+Call:
+
+get_pr_files(prNumber)
+
+Use this to:
+
+- list all changed files
+- determine review order
+- skip binary or clearly generated files
+- prioritize important source code
+
+Preferred review order:
+
+1. source files
+2. configuration files
+3. test files
+4. documentation
+
+---
+
+# Review Strategy
+
+Choose the strategy depending on PR size.
+
+---
+
+## Small PR
+
+If the PR contains only a few files and limited changes:
+
+- review each file sequentially
+- call `get_file_diff(prNumber, path)` for each file
+- only retrieve full file content when necessary
+
+---
+
+## Medium PR
+
+If the PR contains a moderate number of files:
+
+- prioritize high-value files first
+- review file-by-file using `get_file_diff`
+- retrieve full file content only when the patch lacks context
+- use tests only as supporting evidence
+
+---
+
+## Large PR
+
+If the PR is large:
+
+- do NOT load the entire PR into context
+- review iteratively file-by-file
+- start with high-priority files
+- retrieve only the diff for each file
+- retrieve full file content only when necessary
+- focus on high-risk logic changes first
+
+If the PR is extremely large, explain that the review focuses on the most critical files.
+
+---
+
+# Full File Retrieval Rules
+
+When using `get_file_content_at_ref`:
+
+1. Prefer `head.sha` to inspect the current implementation.
+2. Use `base.sha` only if comparing previous behavior is necessary.
+3. Never retrieve full file content for all files automatically.
+4. Avoid retrieving full content for:
+   - documentation
+   - generated files
+   - binary files
+   - trivial changes
+
+---
+
+# What To Inspect
+
+When analyzing each change look for:
+
+- incorrect assumptions
+- null reference risks
+- race conditions
+- deadlocks or synchronization issues
+- incorrect async usage
+- hidden behavior changes
+- missing validation
+- unhandled exceptions
+- duplicated logic
+- performance regressions
+- insufficient tests
+
+When reviewing tests:
+
+- check if new logic is covered
+- verify that tests actually validate behavior
+- do not assume correctness based on test presence alone
+
+---
+
+# Output Format
+
+Return the review using the following structure.
+
+## Verdict
+
+Short summary of the overall quality and risk level of the PR.
+
+---
+
+## Critical Issues
+
+Issues that may cause bugs, crashes, security problems, or serious regressions.
+
+For each issue include:
+
+- file path
+- severity
+- problem description
+- why it matters
+- suggested fix
+
+---
+
+## Important Improvements
+
+Significant improvements related to maintainability, validation, robustness, or performance.
+
+Include:
+
+- file path
+- issue description
+- reason
+- suggested improvement
+
+---
+
+## Minor Suggestions
+
+Optional improvements that are helpful but not critical.
+
+---
+
+## Review Notes
+
+Briefly mention:
+
+- which files were reviewed in detail
+- whether full file content was required
+- whether review scope was limited due to PR size
+
+---
+
+# Behavior Rules
+
+- Be precise and concrete.
+- Do not invent missing context.
+- If something is uncertain, label it as a potential risk.
+- Prefer fewer high-quality findings over many weak comments.
+- Avoid flooding the review with trivial remarks.
+- Optimize for minimal context usage.
