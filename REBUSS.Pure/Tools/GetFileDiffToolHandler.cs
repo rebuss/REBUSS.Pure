@@ -2,8 +2,9 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using REBUSS.Pure.Mcp;
 using REBUSS.Pure.Mcp.Models;
-using REBUSS.Pure.Services;
-using REBUSS.Pure.Services.Models;
+using REBUSS.Pure.Services.Common;
+using REBUSS.Pure.Services.Common.Models;
+using REBUSS.Pure.Services.Diff;
 using REBUSS.Pure.Tools.Models;
 using System.Text.Json;
 

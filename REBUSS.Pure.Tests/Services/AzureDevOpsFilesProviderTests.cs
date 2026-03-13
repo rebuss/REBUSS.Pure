@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using REBUSS.Pure.Services;
-using REBUSS.Pure.Services.Classification;
-using REBUSS.Pure.Services.Models;
+using REBUSS.Pure.Services.Common.Models;
+using REBUSS.Pure.Services.Diff;
+using REBUSS.Pure.Services.FileList;
+using REBUSS.Pure.Services.FileList.Classification;
+using REBUSS.Pure.Services.FileList.Models;
 
 namespace REBUSS.Pure.Tests.Services;
 

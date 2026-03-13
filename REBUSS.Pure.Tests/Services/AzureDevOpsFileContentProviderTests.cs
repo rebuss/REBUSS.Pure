@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using REBUSS.Pure.AzureDevOpsIntegration.Services;
-using REBUSS.Pure.Services;
+using REBUSS.Pure.Services.Common;
+using REBUSS.Pure.Services.Content;
 
 namespace REBUSS.Pure.Tests.Services;
 

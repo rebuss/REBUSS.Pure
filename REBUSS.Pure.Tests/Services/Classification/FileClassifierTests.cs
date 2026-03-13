@@ -1,4 +1,4 @@
-using REBUSS.Pure.Services.Classification;
+using REBUSS.Pure.Services.FileList.Classification;
 
 namespace REBUSS.Pure.Tests.Services.Classification;
 

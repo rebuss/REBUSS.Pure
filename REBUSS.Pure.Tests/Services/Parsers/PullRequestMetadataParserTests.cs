@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using REBUSS.Pure.Services.Parsers;
+using REBUSS.Pure.Services.Common.Parsers;
 
 namespace REBUSS.Pure.Tests.Services.Parsers;
 

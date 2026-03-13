@@ -1,4 +1,4 @@
-using REBUSS.Pure.Services;
+using REBUSS.Pure.Services.Common;
 
 namespace REBUSS.Pure.Tests.Services;
 

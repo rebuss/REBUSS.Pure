@@ -28,4 +28,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Services\Classification\" />
+    <Folder Include="Services\Models\" />
+    <Folder Include="Services\Parsers\" />
+  </ItemGroup>
+
 </Project>
