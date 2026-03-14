@@ -1,6 +1,6 @@
-# REBUSS.PR – Pull Request Analysis MCP Server
+# REBUSS.Pure – Pull Request Analysis MCP Server
 
-REBUSS.PR is a lightweight **MCP (Model Context Protocol) server** designed to enable intelligent pull request analysis by AI agents such as **GitHub Copilot**.
+REBUSS.Pure is a lightweight **MCP (Model Context Protocol) server** designed to enable intelligent pull request analysis by AI agents such as **GitHub Copilot**.
 
 The server provides structured access to pull request data from **Azure DevOps** while minimizing context usage and avoiding the need to clone repositories locally.
 
@@ -16,7 +16,7 @@ Modern AI coding assistants often struggle with large pull requests because:
 - cloning repositories locally is slow and unnecessary
 - AI agents need structured access to repository data instead of large text blobs
 
-REBUSS.PR solves this problem by exposing **small composable MCP tools** that allow an AI agent to retrieve only the information it needs.
+REBUSS.Pure solves this problem by exposing **small composable MCP tools** that allow an AI agent to retrieve only the information it needs.
 
 This enables scalable pull request analysis even for large repositories.
 
@@ -31,7 +31,7 @@ GitHub Copilot
 │
 │ prompt file  (stdio / JSON-RPC 2.0)
 ▼
-MCP Server (REBUSS.PR)
+MCP Server (REBUSS.Pure)
 │
 │ Azure DevOps REST API
 ▼
@@ -94,6 +94,8 @@ Supports an optional `format` parameter:
 - `text` (default) – human-readable summary followed by unified diff content
 - `json` / `structured` – structured JSON object with per-file diffs
 
+Files where a textual diff is not meaningful (deletions, renames, binary files, generated files, and full-file rewrites) are **automatically skipped** — see [Diff Skip Behavior](#diff-skip-behavior) below.
+
 This tool is useful for a quick overview of all changes at once. For large pull requests, prefer `get_file_diff` to retrieve changes file-by-file.
 
 ---
@@ -106,6 +108,8 @@ Supports an optional `format` parameter:
 
 - `text` (default) – human-readable summary followed by unified diff content
 - `json` / `structured` – structured JSON object scoped to the requested file
+
+If the requested file falls into a skip category (deleted, renamed, binary, generated, or full-file rewrite) the response contains a short marker instead of a computed diff — see [Diff Skip Behavior](#diff-skip-behavior) below.
 
 The agent uses this to analyze code changes with minimal context cost.
 
@@ -132,6 +136,45 @@ Full file retrieval is used **only when the diff alone is not sufficient** to un
 
 ---
 
+# Diff Skip Behavior
+
+The diff provider **automatically skips** diff generation for files where a textual diff would be unnecessary, misleading, or wasteful.
+
+When a diff is skipped, the file entry includes a `SkipReason` field that explains why, and the `Diff` field contains a short marker comment instead of computed diff hunks.
+
+## Skip categories
+
+| Category | SkipReason value | Description |
+|---|---|---|
+| **File deletions** | `file deleted` | The file was removed entirely. No content is fetched. |
+| **File renames** | `file renamed` | A pure rename. Fetching content at the new path against the base commit would produce a misleading full-file diff. |
+| **Binary files** | `binary file` | Detected by file extension (`.dll`, `.png`, `.zip`, `.pdf`, `.woff2`, etc.). Textual diffs are meaningless for binary content. |
+| **Generated files** | `generated file` | Detected by path patterns (`/obj/`, `/bin/`, `node_modules/`, `.g.cs`, `.designer.cs`, lock files, etc.). Generated output changes are noise. |
+| **Full-file rewrites** | `full file rewrite` | Both file versions exist and have at least 10 lines, but the diff contains zero unchanged context lines — every line was replaced. This typically indicates a formatting rewrite, re-encoding, or tooling regeneration. |
+
+## Marker format
+
+Skipped files produce a marker in the standard git-diff header style:
+
+```
+diff --git a/path b/path
+--- a/path
++++ b/path
+# <changeType> — <reason>, diff skipped
+```
+
+This allows consumers to see the file in the changed-files list while keeping the diff output minimal.
+
+## When diffs are still computed
+
+Diff generation proceeds normally for:
+
+- file additions (`add`)
+- file edits (`edit`) to non-binary, non-generated source files
+- any file that does not match a skip category
+
+---
+
 # AI-Driven Review Workflow
 
 The intended workflow for AI agents is:
@@ -139,8 +182,9 @@ The intended workflow for AI agents is:
 1. Retrieve pull request metadata
 2. Retrieve the list of changed files
 3. Review files one by one (or the full diff for small PRs)
-4. Retrieve full file content only when necessary
-5. Produce a structured review report
+4. Recognize and skip files whose diffs were automatically omitted
+5. Retrieve full file content only when necessary
+6. Produce a structured review report
 
 This incremental approach prevents context overload and allows AI tools to analyze large pull requests efficiently.
 
@@ -170,11 +214,12 @@ get_file_content_at_ref(path, head.sha)
 
 # Design Goals
 
-REBUSS.PR was designed with the following goals:
+REBUSS.Pure was designed with the following goals:
 
 - minimize AI context usage
 - avoid cloning repositories locally
 - provide deterministic tool outputs
+- skip diff generation for files where diffs are not meaningful
 - enable scalable pull request analysis
 - integrate seamlessly with GitHub Copilot
 
@@ -182,7 +227,7 @@ REBUSS.PR was designed with the following goals:
 
 # Configuration
 
-REBUSS.PR requires Azure DevOps connection settings.
+REBUSS.Pure requires Azure DevOps connection settings.
 
 Required settings under the `AzureDevOps` section:
 
@@ -248,7 +293,7 @@ This repository includes a prompt file:
 .github/prompts/review-pr.prompt.md
 
 
-The prompt instructs GitHub Copilot how to perform a structured code review using the MCP tools provided by REBUSS.PR.
+The prompt instructs GitHub Copilot how to perform a structured code review using the MCP tools provided by REBUSS.Pure.
 
 The agent follows a controlled workflow:
 
@@ -303,4 +348,4 @@ Application Architect & Software Engineer
 Creator of the **REBUSS developer tooling ecosystem**
 
 - https://github.com/rebuss
-- https://rebuss.pro
+- https://REBUSS.Pureo

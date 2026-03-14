@@ -67,6 +67,8 @@ Purpose:
 - retrieve the complete diff for all changed files in a single call
 - get a quick overview of all changes at once
 
+Some files may have their diff **automatically skipped** by the server (see *Skipped Diffs* below). Their diff field will contain a short marker comment instead of computed hunks.
+
 Do not use for large PRs — prefer `get_file_diff` to keep context small.
 
 ---
@@ -78,6 +80,8 @@ Default method for reviewing code.
 Purpose:
 - retrieve only the patch for a specific file
 - analyze changes with minimal context cost
+
+If the file belongs to a skip category (deleted, renamed, binary, generated, or full-file rewrite), the response contains a short marker comment and a `skipReason` value instead of a computed diff. In that case, do not attempt to analyze the diff content — acknowledge the skip reason and move on.
 
 Always prefer this before retrieving full file content.
 
@@ -128,7 +132,7 @@ Use this to:
 
 - list all changed files
 - determine review order
-- skip binary or clearly generated files
+- identify files that will have their diffs skipped (binary, generated, deleted, renamed)
 - prioritize important source code
 
 Preferred review order:
@@ -137,6 +141,45 @@ Preferred review order:
 2. configuration files
 3. test files
 4. documentation
+
+Do not request diffs for files that are clearly binary or generated — the server will skip them automatically, but avoiding unnecessary calls saves time.
+
+---
+
+# Skipped Diffs
+
+The diff provider **automatically skips** diff generation for certain files. When a diff is skipped, the file entry will contain:
+
+- a `skipReason` field explaining why (e.g. `"file deleted"`, `"file renamed"`, `"binary file"`, `"generated file"`, `"full file rewrite"`)
+- a short marker comment in the diff field instead of computed hunks
+
+The marker looks like:
+
+```
+diff --git a/path b/path
+--- a/path
++++ b/path
+# <changeType> — <reason>, diff skipped
+```
+
+## Skip categories
+
+| Category | skipReason | When it applies |
+|---|---|---|
+| File deletions | `file deleted` | File was removed. No content is fetched. |
+| File renames | `file renamed` | Pure rename. Content diff would be misleading. |
+| Binary files | `binary file` | Detected by extension (`.dll`, `.png`, `.zip`, `.pdf`, etc.). |
+| Generated files | `generated file` | Detected by path (`/obj/`, `/bin/`, `.g.cs`, `.designer.cs`, lock files, etc.). |
+| Full-file rewrites | `full file rewrite` | Both versions exist (≥10 lines each) but every line changed — indicates formatting rewrite or tooling output. |
+
+## How to handle skipped diffs
+
+- **Do not** try to analyze the diff content of a skipped file.
+- **Acknowledge** the skip in the review notes (e.g. "File `/lib/tool.dll` skipped: binary file").
+- For deleted files, note the deletion but do not request full content.
+- For renamed files, note the rename.
+- For binary and generated files, skip entirely unless there is a specific concern.
+- For full-file rewrites, consider requesting full file content via `get_file_content_at_ref` only if the file appears to be important source code.
 
 ---
 
@@ -270,6 +313,7 @@ Briefly mention:
 - which files were reviewed in detail
 - whether full file content was required
 - whether review scope was limited due to PR size
+- which files had their diffs skipped by the server and why (use the `skipReason` value)
 
 ---
 
