@@ -193,4 +193,127 @@ public class InitCommandTests
             Directory.Delete(tempDir, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CopiesPromptFiles_ToGitHubPromptsDirectory()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var gitDir = Path.Combine(tempDir, ".git");
+        Directory.CreateDirectory(gitDir);
+
+        try
+        {
+            var output = new StringWriter();
+            var command = new InitCommand(output, tempDir, "rebuss-pure.exe");
+
+            var exitCode = await command.ExecuteAsync();
+
+            Assert.Equal(0, exitCode);
+
+            var reviewPrPath = Path.Combine(tempDir, ".github", "prompts", "review-pr.prompt.md");
+            var selfReviewPath = Path.Combine(tempDir, ".github", "prompts", "self-review.prompt.md");
+
+            Assert.True(File.Exists(reviewPrPath), $"Expected prompt file at {reviewPrPath}");
+            Assert.True(File.Exists(selfReviewPath), $"Expected prompt file at {selfReviewPath}");
+
+            var reviewPrContent = await File.ReadAllTextAsync(reviewPrPath);
+            Assert.Contains("Pull Request Code Review", reviewPrContent);
+            Assert.Contains("REBUSS.Pure", reviewPrContent);
+
+            var selfReviewContent = await File.ReadAllTextAsync(selfReviewPath);
+            Assert.Contains("Self-Review", selfReviewContent);
+            Assert.Contains("get_local_files", selfReviewContent);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SkipsPromptFiles_WhenAlreadyExist()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var gitDir = Path.Combine(tempDir, ".git");
+        var promptsDir = Path.Combine(tempDir, ".github", "prompts");
+        Directory.CreateDirectory(gitDir);
+        Directory.CreateDirectory(promptsDir);
+
+        var existingContent = "# My custom review prompt";
+        await File.WriteAllTextAsync(Path.Combine(promptsDir, "review-pr.prompt.md"), existingContent);
+
+        try
+        {
+            var output = new StringWriter();
+            var command = new InitCommand(output, tempDir, "rebuss-pure.exe");
+
+            var exitCode = await command.ExecuteAsync();
+
+            Assert.Equal(0, exitCode);
+
+            var reviewPrContent = await File.ReadAllTextAsync(Path.Combine(promptsDir, "review-pr.prompt.md"));
+            Assert.Equal(existingContent, reviewPrContent);
+
+            var selfReviewPath = Path.Combine(promptsDir, "self-review.prompt.md");
+            Assert.True(File.Exists(selfReviewPath));
+
+            Assert.Contains("already exists, skipping", output.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OutputMentionsPromptCopy()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var gitDir = Path.Combine(tempDir, ".git");
+        Directory.CreateDirectory(gitDir);
+
+        try
+        {
+            var output = new StringWriter();
+            var command = new InitCommand(output, tempDir, "rebuss-pure.exe");
+
+            await command.ExecuteAsync();
+
+            var outputText = output.ToString();
+            Assert.Contains("Copied", outputText);
+            Assert.Contains("prompt file(s)", outputText);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CopiesPrompts_FromSubdirectory()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var gitDir = Path.Combine(tempDir, ".git");
+        var subDir = Path.Combine(tempDir, "src", "app");
+        Directory.CreateDirectory(gitDir);
+        Directory.CreateDirectory(subDir);
+
+        try
+        {
+            var output = new StringWriter();
+            var command = new InitCommand(output, subDir, "rebuss-pure.exe");
+
+            var exitCode = await command.ExecuteAsync();
+
+            Assert.Equal(0, exitCode);
+
+            var reviewPrPath = Path.Combine(tempDir, ".github", "prompts", "review-pr.prompt.md");
+            Assert.True(File.Exists(reviewPrPath));
+            Assert.False(File.Exists(Path.Combine(subDir, ".github", "prompts", "review-pr.prompt.md")));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
 }

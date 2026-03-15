@@ -107,7 +107,12 @@ or, if installed as a global .NET tool:
 rebuss-pure init
 ```
 
-This creates a `.vscode/mcp.json` file in your repository root with `--repo` pre-configured.
+This creates:
+- `.vscode/mcp.json` — MCP server configuration with `--repo` pre-configured
+- `.github/prompts/review-pr.prompt.md` — GitHub Copilot prompt for PR reviews
+- `.github/prompts/self-review.prompt.md` — GitHub Copilot prompt for local self-reviews
+
+If any of these files already exist, they are **not overwritten** — the command skips them and prints a message.
 
 To embed your PAT directly in the generated config, pass `--pat` to `init`:
 
@@ -456,7 +461,7 @@ REBUSS.Pure was designed with the following goals:
 
 ## `init`
 
-Generates a `.vscode/mcp.json` configuration file in the current repository root.
+Generates a `.vscode/mcp.json` configuration file and copies GitHub Copilot prompt files to `.github/prompts/` in the current repository root.
 
 ```
 cd /path/to/your/azure-devops-repo
@@ -477,9 +482,14 @@ rebuss-pure init --pat your-pat-here
 
 > ⚠️ If you use `--pat`, add `.vscode/mcp.json` to `.gitignore` before committing.
 
-The generated configuration tells MCP clients to launch the server with `--repo ${workspaceFolder}`, which automatically passes the workspace path to the server at startup.
+The `init` command performs the following steps:
 
-If a `.vscode/mcp.json` already exists, the command prints a message and exits without overwriting.
+1. **Creates `.vscode/mcp.json`** — tells MCP clients to launch the server with `--repo ${workspaceFolder}`
+2. **Copies prompt files to `.github/prompts/`**:
+   - `review-pr.prompt.md` — structured PR code review prompt
+   - `self-review.prompt.md` — structured local self-review prompt
+
+If any file already exists, the command **skips it without overwriting** and prints a message.
 
 ---
 
@@ -674,7 +684,7 @@ This repository includes two prompt files:
 
 `.github/prompts/self-review.prompt.md` — structured self-review of local git changes using local tools (no Azure DevOps required).
 
-Both prompts instruct GitHub Copilot how to follow the incremental review workflow using the MCP tools provided by REBUSS.Pure.
+Both prompts are automatically copied to your repository when you run `rebuss-pure init`. They instruct GitHub Copilot how to follow the incremental review workflow using the MCP tools provided by REBUSS.Pure.
 
 ---
 

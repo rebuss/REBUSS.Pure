@@ -34,6 +34,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Cli\Prompts\review-pr.prompt.md" />
+    <EmbeddedResource Include="Cli\Prompts\self-review.prompt.md" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="REBUSS.Pure.Tests" />
   </ItemGroup>
 
