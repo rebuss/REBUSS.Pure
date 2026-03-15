@@ -39,7 +39,8 @@ namespace REBUSS.Pure
                 "init" => new InitCommand(
                     Console.Error,
                     Environment.CurrentDirectory,
-                    GetExecutablePath()),
+                    GetExecutablePath(),
+                    parseResult.Pat),
                 _ => throw new InvalidOperationException($"Unknown command: {parseResult.CommandName}")
             };
 

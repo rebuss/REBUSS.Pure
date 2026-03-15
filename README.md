@@ -42,11 +42,37 @@ Instead of sending a large diff to the AI model, the MCP server exposes tools th
 
 ---
 
+# Installation
+
+## Download
+
+Download the latest release from [GitHub Releases](https://github.com/rebuss/REBUSS.Pure/releases).
+
+Or install automatically using the provided scripts:
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/rebuss/REBUSS.Pure/master/install.ps1 | iex
+```
+
+**Linux / macOS:**
+```sh
+curl -fsSL https://raw.githubusercontent.com/rebuss/REBUSS.Pure/master/install.sh | bash
+```
+
+The scripts download the `.nupkg` from the latest GitHub Release and install `REBUSS.Pure` as a global .NET tool. After installation, the tool is available as `rebuss-pure` on your PATH.
+
+> **Prerequisite:** [.NET 8 SDK or Runtime](https://dotnet.microsoft.com/download) must be installed.
+
+---
+
 # Quick Start
 
 ## Recommended configuration
 
-The recommended way to configure REBUSS.Pure is to pass **`--repo`** and **`--pat`** directly as command-line arguments in your `mcp.json` file. This is the simplest and most reliable setup — the server receives the workspace path and authentication token at startup, with no additional configuration files or environment variables needed.
+The recommended way to store your PAT is in **`appsettings.Local.json`** (never committed to Git) or as an **environment variable**. This keeps secrets out of `mcp.json`, which may be visible in MCP client UIs or accidentally committed to source control.
+
+`--pat` as a command-line argument in `mcp.json` is supported and convenient, but treat it as a shortcut — not a best practice for shared or versioned configurations.
 
 ## 1. Initialize the MCP configuration
 
@@ -56,7 +82,21 @@ Navigate to your Azure DevOps repository and run:
 REBUSS.Pure.exe init
 ```
 
-This creates a `.vscode/mcp.json` file in your repository root. After running `init`, **add your PAT** to the generated configuration:
+or, if installed as a global .NET tool:
+
+```
+rebuss-pure init
+```
+
+This creates a `.vscode/mcp.json` file in your repository root with `--repo` pre-configured.
+
+To embed your PAT directly in the generated config, pass `--pat` to `init`:
+
+```
+rebuss-pure init --pat your-pat-here
+```
+
+Generated config without PAT:
 
 ```json
 {
@@ -64,25 +104,36 @@ This creates a `.vscode/mcp.json` file in your repository root. After running `i
     "REBUSS.Pure": {
       "type": "stdio",
       "command": "path/to/REBUSS.Pure.exe",
-      "args": [
-        "--repo", "${workspaceFolder}",
-        "--pat", "your-pat-here"
-      ]
+      "args": ["--repo", "${workspaceFolder}"]
     }
   }
 }
 ```
 
-> **Why `--repo` and `--pat` in args?**
-> - `--repo ${workspaceFolder}` ensures the server always knows which repository to analyze, regardless of the working directory.
-> - `--pat` provides authentication inline — no need to manage separate config files or environment variables.
-> - Both arguments take the **highest priority** and override all other configuration sources.
+Generated config with PAT:
 
-> **Alternative authentication methods:** If you prefer not to put the PAT in `mcp.json`, you can use `appsettings.Local.json` or environment variables instead (see [Storing Secrets Locally](#storing-secrets-locally)).
+```json
+{
+  "servers": {
+    "REBUSS.Pure": {
+      "type": "stdio",
+      "command": "path/to/REBUSS.Pure.exe",
+      "args": ["--repo", "${workspaceFolder}", "--pat", "your-pat-here"]
+    }
+  }
+}
+```
+
+> ⚠️ If you pass `--pat` to `init`, make sure `.vscode/mcp.json` is listed in `.gitignore` — otherwise your PAT ends up in the repository.
+
+If you prefer to keep secrets out of `mcp.json` entirely, skip `--pat` and configure your PAT via `appsettings.Local.json` instead — see [Storing Secrets Locally](#storing-secrets-locally).
+
+> **Why `--repo` in args?**
+> `--repo ${workspaceFolder}` ensures the server always knows which repository to analyze, regardless of the working directory. It takes the **highest priority** and overrides all other configuration sources.
 
 > **Visual Studio Professional** uses a global `%USERPROFILE%\.mcp.json` and does **not** expand `${workspaceFolder}`.
 > However, Visual Studio automatically sends the open solution folder as an MCP root during initialization,
-> so the server detects the repository without `--repo`. You still need to provide the PAT:
+> so the server detects the repository without `--repo`. Configure the PAT via `appsettings.Local.json` or an environment variable:
 >
 > ```json
 > {
@@ -90,7 +141,7 @@ This creates a `.vscode/mcp.json` file in your repository root. After running `i
 >     "REBUSS.Pure": {
 >       "type": "stdio",
 >       "command": "C:\\path\\to\\REBUSS.Pure.exe",
->       "args": ["--pat", "your-pat-here"]
+>       "args": []
 >     }
 >   }
 > }
@@ -98,7 +149,7 @@ This creates a `.vscode/mcp.json` file in your repository root. After running `i
 
 ## 2. Open the repository in VS Code
 
-The MCP client will automatically detect the configuration and launch the server with the correct `--repo` and `--pat` arguments.
+The MCP client will automatically detect the configuration and launch the server with the correct `--repo` argument.
 
 ## 3. Use it with GitHub Copilot
 
@@ -303,7 +354,7 @@ REBUSS.Pure was designed with the following goals:
 
 ---
 
-# CLI Commands
+## CLI Commands
 
 ## `init`
 
@@ -313,6 +364,20 @@ Generates a `.vscode/mcp.json` configuration file in the current repository root
 cd /path/to/your/azure-devops-repo
 REBUSS.Pure.exe init
 ```
+
+or, if installed as a global .NET tool:
+
+```
+rebuss-pure init
+```
+
+Optionally pass `--pat` to embed the token directly in the generated file:
+
+```
+rebuss-pure init --pat your-pat-here
+```
+
+> ⚠️ If you use `--pat`, add `.vscode/mcp.json` to `.gitignore` before committing.
 
 The generated configuration tells MCP clients to launch the server with `--repo ${workspaceFolder}`, which automatically passes the workspace path to the server at startup.
 
@@ -347,7 +412,7 @@ Repository detection is **lazy** — it happens only when a tool requires it (af
 
 ## Manual MCP client configuration
 
-If you prefer not to use `init`, you can manually create the configuration. The recommended setup includes both `--repo` and `--pat`:
+If you prefer not to use `init`, you can manually create the configuration:
 
 ```json
 {
@@ -355,16 +420,31 @@ If you prefer not to use `init`, you can manually create the configuration. The 
     "REBUSS.Pure": {
       "type": "stdio",
       "command": "path/to/REBUSS.Pure.exe",
-      "args": [
-        "--repo", "${workspaceFolder}",
-        "--pat", "your-pat-here"
-      ]
+      "args": ["--repo", "${workspaceFolder}"]
     }
   }
 }
 ```
 
 Place this in `.vscode/mcp.json` (per-workspace) or `~/.mcp.json` (global).
+
+Store your PAT in `appsettings.Local.json` or as an environment variable — see [Storing Secrets Locally](#storing-secrets-locally).
+
+If you need to pass the PAT inline (e.g. in a CI environment or when no config file is available), you can add `--pat` as an argument:
+
+```json
+{
+  "servers": {
+    "REBUSS.Pure": {
+      "type": "stdio",
+      "command": "path/to/REBUSS.Pure.exe",
+      "args": ["--repo", "${workspaceFolder}", "--pat", "your-pat-here"]
+    }
+  }
+}
+```
+
+> ⚠️ Avoid committing `mcp.json` with a real PAT to source control.
 
 ## Command-line arguments
 
@@ -444,7 +524,8 @@ that do not expose the server's stderr stream in their UI.
 
 ## Storing Secrets Locally
 
-> **Never put real secrets in `appsettings.json`.** That file is committed to the repository and must only contain empty defaults or non-sensitive values.
+> **Never put real secrets in `appsettings.json`** — that file is committed to the repository.
+> **Avoid putting real secrets in `mcp.json`** — that file may also be committed or visible in MCP client UIs.
 
 ### Option 1 — `appsettings.Local.json` (recommended)
 
@@ -481,9 +562,9 @@ Environment variables take the highest priority and override both JSON files.
 ### Configuration priority (lowest → highest)
 
 1. `appsettings.json` — committed, contains defaults (no secrets)
-2. `appsettings.Local.json` — not committed, contains your personal secrets
+2. `appsettings.Local.json` — not committed, contains your personal secrets ✅ recommended
 3. Environment variables — useful for CI/CD or container deployments
-4. Command-line arguments (`--pat`, `--org`, `--project`, `--repository`) — highest priority
+4. Command-line arguments (`--pat`, `--org`, `--project`, `--repository`) — highest priority, convenient but avoid in committed files
 
 ---
 
@@ -549,4 +630,3 @@ Application Architect & Software Engineer
 Creator of the **REBUSS developer tooling ecosystem**
 
 - https://github.com/rebuss
-- https://REBUSS.Pureo

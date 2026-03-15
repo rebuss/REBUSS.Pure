@@ -13,14 +13,16 @@ public class InitCommand : ICliCommand
     private readonly TextWriter _output;
     private readonly string _workingDirectory;
     private readonly string _executablePath;
+    private readonly string? _pat;
 
     public string Name => "init";
 
-    public InitCommand(TextWriter output, string workingDirectory, string executablePath)
+    public InitCommand(TextWriter output, string workingDirectory, string executablePath, string? pat = null)
     {
         _output = output;
         _workingDirectory = workingDirectory;
         _executablePath = executablePath;
+        _pat = pat;
     }
 
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -45,7 +47,7 @@ public class InitCommand : ICliCommand
         Directory.CreateDirectory(vsCodeDir);
 
         var normalizedExePath = _executablePath.Replace("\\", "\\\\");
-        var configContent = BuildConfigContent(normalizedExePath);
+        var configContent = BuildConfigContent(normalizedExePath, _pat);
 
         await File.WriteAllTextAsync(mcpConfigPath, configContent, cancellationToken);
 
@@ -57,15 +59,19 @@ public class InitCommand : ICliCommand
         return 0;
     }
 
-    internal static string BuildConfigContent(string normalizedExePath)
+    internal static string BuildConfigContent(string normalizedExePath, string? pat = null)
     {
+        var patArgs = string.IsNullOrWhiteSpace(pat)
+            ? string.Empty
+            : $", \"--pat\", \"{pat}\"";
+
         return $$"""
             {
               "servers": {
                 "REBUSS.Pure": {
                   "type": "stdio",
                   "command": "{{normalizedExePath}}",
-                  "args": ["--repo", "${workspaceFolder}"]
+                  "args": ["--repo", "${workspaceFolder}"{{patArgs}}]
                 }
               }
             }

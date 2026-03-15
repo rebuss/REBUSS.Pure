@@ -7,6 +7,18 @@
     <Nullable>enable</Nullable>
     <AssemblyTitle>REBUSS.Pure</AssemblyTitle>
     <AssemblyName>REBUSS.Pure</AssemblyName>
+
+    <!-- .NET Tool packaging -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>rebuss-pure</ToolCommandName>
+    <PackageId>REBUSS.Pure</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Michał Korbecki</Authors>
+    <Description>Lightweight MCP server for AI-assisted pull request analysis in Azure DevOps repositories.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/rebuss/REBUSS.Pure</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rebuss/REBUSS.Pure</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>

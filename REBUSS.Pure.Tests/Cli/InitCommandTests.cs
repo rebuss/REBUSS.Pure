@@ -119,5 +119,78 @@ public class InitCommandTests
         Assert.Contains("\"stdio\"", content);
         Assert.Contains("\"--repo\"", content);
         Assert.Contains("\"${workspaceFolder}\"", content);
+        Assert.DoesNotContain("--pat", content);
+    }
+
+    [Fact]
+    public void BuildConfigContent_IncludesPat_WhenProvided()
+    {
+        var content = InitCommand.BuildConfigContent("C:\\\\tools\\\\REBUSS.Pure.exe", "my-secret-pat");
+
+        Assert.Contains("\"--pat\"", content);
+        Assert.Contains("\"my-secret-pat\"", content);
+    }
+
+    [Fact]
+    public void BuildConfigContent_OmitsPat_WhenNullOrEmpty()
+    {
+        var contentNull  = InitCommand.BuildConfigContent("exe", null);
+        var contentEmpty = InitCommand.BuildConfigContent("exe", "");
+        var contentWhite = InitCommand.BuildConfigContent("exe", "   ");
+
+        Assert.DoesNotContain("--pat", contentNull);
+        Assert.DoesNotContain("--pat", contentEmpty);
+        Assert.DoesNotContain("--pat", contentWhite);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithPat_IncludesPatInConfig()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var gitDir = Path.Combine(tempDir, ".git");
+        Directory.CreateDirectory(gitDir);
+
+        try
+        {
+            var output = new StringWriter();
+            var command = new InitCommand(output, tempDir, "rebuss-pure.exe", "my-pat-value");
+
+            var exitCode = await command.ExecuteAsync();
+
+            Assert.Equal(0, exitCode);
+
+            var content = await File.ReadAllTextAsync(Path.Combine(tempDir, ".vscode", "mcp.json"));
+            Assert.Contains("\"--pat\"", content);
+            Assert.Contains("\"my-pat-value\"", content);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutPat_OmitsPatFromConfig()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var gitDir = Path.Combine(tempDir, ".git");
+        Directory.CreateDirectory(gitDir);
+
+        try
+        {
+            var output = new StringWriter();
+            var command = new InitCommand(output, tempDir, "rebuss-pure.exe");
+
+            var exitCode = await command.ExecuteAsync();
+
+            Assert.Equal(0, exitCode);
+
+            var content = await File.ReadAllTextAsync(Path.Combine(tempDir, ".vscode", "mcp.json"));
+            Assert.DoesNotContain("--pat", content);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
     }
 }

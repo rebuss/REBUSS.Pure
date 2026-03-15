@@ -165,7 +165,7 @@ Full codebase context is included below (file-role map, dependency graph, DI reg
 |---|---|
 | `REBUSS.Pure\Cli\CliArgumentParser.cs` | Parses CLI args: detects `init` command vs server mode, extracts `--repo`, `--pat`, `--org`, `--project`, `--repository` |
 | `REBUSS.Pure\Cli\ICliCommand.cs` | Interface: executable CLI command |
-| `REBUSS.Pure\Cli\InitCommand.cs` | `init` command: generates `.vscode/mcp.json` in current repo with `--repo ${workspaceFolder}` |
+| `REBUSS.Pure\Cli\InitCommand.cs` | `init` command: generates `.vscode/mcp.json` in current repo with `--repo ${workspaceFolder}`; optionally embeds `--pat` in args when `--pat` is passed to `init` |
 
 ### Logging
 
