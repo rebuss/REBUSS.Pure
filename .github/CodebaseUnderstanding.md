@@ -10,7 +10,7 @@ Full codebase context is included below (file-role map, dependency graph, DI reg
 
 | Project | Path | Purpose |
 |---|---|---|
-| REBUSS.Pure | `REBUSS.Pure\REBUSS.Pure.csproj` | MCP server (console app, .NET 8) |
+| REBUSS.Pure | `REBUSS.Pure\REBUSS.Pure.csproj` | MCP server (console app, .NET 10; NuGet package `AzureDevOps.MCP.CodeReview`, command `rebuss-pr`) |
 | REBUSS.Pure.Tests | `REBUSS.Pure.Tests\REBUSS.Pure.Tests.csproj` | Unit + integration tests (xUnit, NSubstitute) |
 
 ---
@@ -450,7 +450,7 @@ services.AddSingleton<McpServer>(...);
 
 | Aspect | Value |
 |---|---|
-| **Target framework** | .NET 8 (`net8.0`) |
+| **Target framework** | .NET 10 (`net10.0`) |
 | **C# version** | 12.0 (implicit via .NET 8 SDK) |
 | **Nullable context** | `enable` (project-wide) |
 | **Implicit usings** | `enable` |
