@@ -90,14 +90,13 @@ dotnet tool install -g REBUSS.Pure
 ### PowerShell (pre-release)
 
 ```powershell
-dotnet tool install -g REBUSS.Pure --add-source https://api.nuget.org/v3/index.json
+irm https://raw.githubusercontent.com/rebuss/AzureDevOps.MCP.CodeReview/master/install.ps1 | iex
 ```
 
 ### Bash (pre-release)
 
 ```bash
-dotnet tool install -g REBUSS.Pure --add-source https://api.nuget.org/v3/index.json
-export PATH="$PATH:$HOME/.dotnet/tools"
+curl -fsSL https://raw.githubusercontent.com/rebuss/AzureDevOps.MCP.CodeReview/master/install.sh | bash
 ```
 
 > **Note:** The package is not yet published to NuGet. After the first release, a simple `dotnet tool install -g REBUSS.Pure` will work.
