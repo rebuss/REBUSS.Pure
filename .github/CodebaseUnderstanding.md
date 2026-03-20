@@ -10,7 +10,7 @@ Full codebase context is included below (file-role map, dependency graph, DI reg
 
 | Project | Path | Purpose |
 |---|---|---|
-| REBUSS.Pure | `REBUSS.Pure\REBUSS.Pure.csproj` | MCP server (console app, .NET 10; NuGet package `AzureDevOps.MCP.CodeReview`, command `rebuss-pure`) |
+| REBUSS.Pure | `REBUSS.Pure\REBUSS.Pure.csproj` | MCP server (console app, .NET 10; NuGet package `CodeReview.MCP`, command `rebuss-pure`) |
 | REBUSS.Pure.Tests | `REBUSS.Pure.Tests\REBUSS.Pure.Tests.csproj` | Unit + integration tests (xUnit, NSubstitute) |
 
 ---

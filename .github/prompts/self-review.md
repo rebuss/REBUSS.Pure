@@ -61,7 +61,7 @@ Notes:
 
 # Mandatory Workflow
 
-## Step 1 — List changed files
+## Step 1 ï¿½ List changed files
 Call:
 
 get_local_files([scope])
@@ -69,11 +69,11 @@ get_local_files([scope])
 Then:
 - note repositoryRoot and currentBranch  
 - read file categories and priorities  
-- decide which files are worth reviewing (source › config › tests › docs)
+- decide which files are worth reviewing (source ï¿½ config ï¿½ tests ï¿½ docs)
 
 ---
 
-## Step 2 — Retrieve diffs only for relevant files
+## Step 2 ï¿½ Retrieve diffs only for relevant files
 
 For each file that merits actual review:
 

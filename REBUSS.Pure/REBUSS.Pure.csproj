@@ -11,16 +11,16 @@
     <!-- .NET Tool packaging -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>rebuss-pure</ToolCommandName>
-    <PackageId>AzureDevOps.MCP.CodeReview</PackageId>
-    <Version>0.1.0</Version>
+    <PackageId>CodeReview.MCP</PackageId>
+    <Version>0.2.0</Version>
     <Authors>Michał Korbecki</Authors>
-    <Description>Lightweight MCP server for AI-assisted pull request analysis in Azure DevOps repositories.</Description>
+    <Description>Lightweight MCP server for AI-assisted pull request analysis. Supports Azure DevOps and GitHub.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/rebuss/AzureDevOps.MCP.CodeReview</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/rebuss/AzureDevOps.MCP.CodeReview</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/rebuss/CodeReview.MCP</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rebuss/CodeReview.MCP</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>mcp;azure-devops;pull-request;code-review;copilot;dotnet-tool</PackageTags>
+    <PackageTags>mcp;azure-devops;github;pull-request;code-review;copilot;dotnet-tool;ai</PackageTags>
     <RollForward>Major</RollForward>
   </PropertyGroup>
 
